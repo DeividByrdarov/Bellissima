@@ -10,6 +10,7 @@ import Login from "./routes/Login"
 import Home from "./routes/Home"
 import Booking from "./routes/Booking"
 import AuthRoute from "./hoc/AuthRoute"
+import config from "./config"
 
 import "./assets/scss/main.scss"
 
@@ -25,7 +26,7 @@ const request = async operation => {
 }
 
 const client = new ApolloClient({
-  uri: "http://localhost:4000/graphql",
+  uri: `http://${config.backendUrl}/graphql`,
   fetchOptions: {
     credentials: "include",
   },
