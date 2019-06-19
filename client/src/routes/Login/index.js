@@ -37,16 +37,7 @@ export class Login extends Component {
             this.props.history.push("/")
           }
           return (
-            <form
-              onSubmit={() =>
-                login({
-                  variables: {
-                    email: this.state.email,
-                    password: this.state.password,
-                  },
-                })
-              }
-            >
+            <div>
               <Input
                 type="email"
                 name="email"
@@ -73,7 +64,7 @@ export class Login extends Component {
               >
                 Влизане
               </button>
-            </form>
+            </div>
           )
         }}
       </Mutation>
