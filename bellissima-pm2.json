@@ -1,0 +1,22 @@
+{
+        "apps": [
+                {
+                        "name": "bellissima-server",
+                        "script": "npm",
+                        "args": "run server",
+                        "env": {
+                                "HOST": "0.0.0.0",
+				"PORT": "9000"
+                        }
+                },
+                {
+                        "name": "bellissima-client",
+                        "script": "npm",
+                        "args": "run client",
+                        "env": {
+                                "REACT_APP_BACKEND": "server.bellissima.dbardarov.com",
+				"PORT": "9001"
+                        }
+                }
+        ]
+}
