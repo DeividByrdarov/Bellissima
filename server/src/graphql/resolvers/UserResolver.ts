@@ -1,12 +1,12 @@
 import * as bcryptjs from "bcryptjs"
 import * as jwt from "jsonwebtoken"
-import { Resolver, Mutation, Arg, Authorized } from "type-graphql"
+import { Resolver, Mutation, Arg } from "type-graphql"
 import User, { UserType } from "../../models/User"
 import { LoginResponse } from "../types/UserTypes"
 
 @Resolver()
 export default class UserResolver {
-  @Authorized(true)
+  //@Authorized(true)
   @Mutation(() => UserType)
   async register(
     @Arg("firstname") firstname: string,
@@ -27,7 +27,7 @@ export default class UserResolver {
 
     await user.save()
     return {
-      ...user,
+      ...user.toObject(),
       password: genPassword,
     }
   }
