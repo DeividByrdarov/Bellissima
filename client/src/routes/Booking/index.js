@@ -1,26 +1,18 @@
 import React, { Component } from "react"
 import { gql } from "apollo-boost"
 import { Mutation } from "react-apollo"
+import moment from "moment"
 import ProcedureManager from "./ProcedureManager"
 import DaySelect from "./DaySelect"
 import TimeSelect from "./TimeSelect"
 import Input from "../../components/Input/Input"
 
 const CREATE_BOOKING_MUTATION = gql`
-  mutation createBooking($start_time: String!, $procedures: [String!]!) {
-    createBooking(start_time: $start_time, procedures: $procedures) {
-      _id
-      start_time
-      duration
-      procedures {
-        _id
-        name
-        price
-        required_time
-        slug
-        info
-      }
-    }
+  mutation createBooking(
+    $start_time: String!
+    $procedures: [ProcedureWithInfoInputType!]!
+  ) {
+    createBooking(start_time: $start_time, procedures: $procedures)
   }
 `
 
@@ -34,7 +26,7 @@ export class Booking extends Component {
   mapProcedures = procedures => {
     return procedures.map(pr => ({
       label: pr.name + " - " + pr.price + " лева",
-      value: pr.slug,
+      value: pr._id,
       name: pr.name,
       duration: pr.required_time,
     }))
@@ -66,37 +58,72 @@ export class Booking extends Component {
     this.setState({ time: data })
   }
 
+  getValuesFromProceduresSelect(procedures) {
+    return procedures.reduce(
+      (acc, pr) => [
+        ...acc,
+        {
+          procedure: pr.value,
+          info: pr.info || null,
+          image_url: pr.image || null,
+        },
+      ],
+      []
+    )
+  }
+
   render() {
+    const { dayMonth, time, procedures } = this.state
     return (
       <Mutation mutation={CREATE_BOOKING_MUTATION}>
-        {createBooking => (
-          <form onSubmit={this.createBooking}>
-            Booking
-            <ProcedureManager
-              procedures={this.state.procedures}
-              mapProcedures={this.mapProcedures}
-              onChange={this.onProceduresChange}
-              infoChange={this.procedureInfoChange}
-            />
-            <br />
-            <DaySelect
-              dayMonth={this.state.dayMonth}
-              onChange={this.onDayMonthChange}
-            />
-            <br />
-            {this.state.dayMonth && (
-              <TimeSelect
-                duration={this.state.procedures.reduce(
-                  (acc, pr) => acc + pr.duration,
-                  0
-                )}
-                dayMonth={this.state.dayMonth.value}
-                onChange={this.onTimeChange}
+        {(createBooking, { data }) => {
+          if (data && !data.createBooking) {
+            return <h2>Something went wrong...</h2>
+          }
+
+          return (
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                createBooking({
+                  variables: {
+                    start_time: `${moment().get("year")}-${
+                      dayMonth.value.month
+                    }-${dayMonth.value.day} ${time}`,
+                    procedures: this.getValuesFromProceduresSelect(procedures),
+                  },
+                })
+              }}
+            >
+              Booking
+              <ProcedureManager
+                procedures={this.state.procedures}
+                mapProcedures={this.mapProcedures}
+                onChange={this.onProceduresChange}
+                infoChange={this.procedureInfoChange}
               />
-            )}
-            {this.state.time && <Input type="submit" value="Create Booking" />}
-          </form>
-        )}
+              <br />
+              <DaySelect
+                dayMonth={this.state.dayMonth}
+                onChange={this.onDayMonthChange}
+              />
+              <br />
+              {this.state.dayMonth && (
+                <TimeSelect
+                  duration={this.state.procedures.reduce(
+                    (acc, pr) => acc + pr.duration,
+                    0
+                  )}
+                  dayMonth={this.state.dayMonth.value}
+                  onChange={this.onTimeChange}
+                />
+              )}
+              {this.state.time && (
+                <Input type="submit" value="Create Booking" />
+              )}
+            </form>
+          )
+        }}
       </Mutation>
     )
   }

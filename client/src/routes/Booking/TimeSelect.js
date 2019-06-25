@@ -53,7 +53,7 @@ export class TimeSelect extends Component {
         query={GET_HOURS_FOR_DAY}
         variables={{
           duration: this.props.duration,
-          dayMonth: this.props.dayMonth,
+          dayMonth: `${this.props.dayMonth.day}.${this.props.dayMonth.month}`,
         }}
       >
         {({ error, loading, data }) => {

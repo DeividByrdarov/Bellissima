@@ -24,7 +24,10 @@ export class DaySelect extends Component {
       const month = dm.month < 10 ? "0" + dm.month : dm.month
       return {
         label: `${dm.weekday} ${day}.${month}`,
-        value: `${day}.${month}`,
+        value: {
+          day,
+          month,
+        },
       }
     })
   }

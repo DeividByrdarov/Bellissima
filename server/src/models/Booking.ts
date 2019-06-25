@@ -1,13 +1,13 @@
 import * as mongoose from "mongoose"
 import { ObjectType, Field, ID } from "type-graphql"
-import { ProcedureType, IProcedure } from "./Procedure"
 import { UserType } from "./User"
+import { IProcedureWithInfo } from "./ProceduresForBooking"
+import { ProcedureWithInfoType } from "../graphql/types/ProcedureTypes"
 
 export interface IBooking extends mongoose.Document {
   start_time: Date
   duration: number
   user: string
-  procedures: [IProcedure]
 }
 
 @ObjectType()
@@ -20,8 +20,8 @@ export class BookingType {
   duration: Number
   @Field()
   user: UserType
-  @Field(() => [ProcedureType])
-  procedures: [ProcedureType]
+  @Field(() => [ProcedureWithInfoType])
+  procedures: IProcedureWithInfo[]
 }
 
 const bookingSchema = new mongoose.Schema({
@@ -40,13 +40,6 @@ const bookingSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  procedures: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Procedure",
-      required: true,
-    },
-  ],
 })
 
 const Booking = mongoose.model<IBooking>("Booking", bookingSchema)

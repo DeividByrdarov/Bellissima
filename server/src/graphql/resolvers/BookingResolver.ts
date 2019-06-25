@@ -1,10 +1,27 @@
-import { Resolver, Query, Mutation, Arg, Authorized, Ctx } from "type-graphql"
-import Booking, { BookingType } from "../../models/Booking"
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Arg,
+  Authorized,
+  Ctx,
+  FieldResolver,
+  Root,
+} from "type-graphql"
+import * as moment from "moment"
+import Booking, { BookingType, IBooking } from "../../models/Booking"
 import Procedure, { ProcedureType } from "../../models/Procedure"
 import { UserType } from "../../models/User"
-import * as moment from "moment"
 import Config from "../../models/Config"
 import { AvailableDaysResponse, HourMinute } from "../types/BookingTypes"
+import ProceduresForBooking, {
+  IProcedureWithInfo,
+  IProceduresForBooking,
+} from "../../models/ProceduresForBooking"
+import {
+  ProcedureWithInfoInputType,
+  ProcedureWithInfoType,
+} from "../types/ProcedureTypes"
 
 @Resolver(() => BookingType)
 export default class BookingResolver {
@@ -29,7 +46,7 @@ export default class BookingResolver {
     }
   }
 
-  @Authorized()
+  @Authorized(true)
   @Query(() => [BookingType])
   async getBookings() {
     return await Booking.find({})
@@ -37,7 +54,7 @@ export default class BookingResolver {
       .lean()
   }
 
-  // @Authorized()
+  @Authorized()
   @Query(() => AvailableDaysResponse)
   async getAvailableDays() {
     const working_hours = await Config.findOne(
@@ -139,49 +156,79 @@ export default class BookingResolver {
   }
 
   @Authorized()
-  @Mutation(() => BookingType)
+  @Mutation(() => Boolean)
   async createBooking(
     @Arg("start_time") start_time: string,
-    @Arg("procedures", () => [String]) procedures: string[],
+    @Arg("procedures", () => [ProcedureWithInfoInputType])
+    procedures: IProcedureWithInfo[],
     @Ctx("req") { user }: { user: UserType }
   ) {
-    const fetchProcedures = await Procedure.find({
-      _id: { $in: procedures },
-    }).lean()
-    const duration = fetchProcedures.reduce(
-      (acc: number, pr: ProcedureType) => acc + pr.required_time,
-      0
-    )
-    const booking = new Booking({
-      start_time,
-      user: user._id,
-      procedures,
-      duration,
-    })
+    try {
+      const procedures_ids = procedures.reduce<string[]>(
+        (acc, pr): string[] => [...acc, pr.procedure],
+        []
+      )
+      const fetchProcedures = await Procedure.find(
+        {
+          _id: { $in: procedures_ids },
+        },
+        { required_time: 1 }
+      ).lean()
+      const duration = fetchProcedures.reduce(
+        (acc: number, pr: ProcedureType) => acc + pr.required_time,
+        0
+      )
+      const booking = new Booking({
+        start_time: moment.utc(start_time),
+        user: user._id,
+        duration,
+      })
 
-    await booking.save()
-    return await Booking.findById(booking._id)
-      .populate(["procedures", "user"])
-      .exec()
-  }
+      await booking.save()
 
-  @Authorized()
-  @Mutation(() => BookingType)
-  async addProcedureToBooking(
-    @Arg("booking_id") booking_id: string,
-    @Arg("procedure_slug") procedure_slug: string
-  ) {
-    const booking = await Booking.findById(booking_id)
-      .populate(["procedures", "user"])
-      .exec()
-    const procedure = await Procedure.findOne({ slug: procedure_slug }).lean()
+      const procedureForBooking = new ProceduresForBooking({
+        booking: booking._id,
+        procedures,
+      })
 
-    if (booking && procedure) {
-      booking.procedures.push(procedure)
-      booking.duration = booking.duration + procedure.required_time
-      booking.save()
+      await procedureForBooking.save()
+
+      return true
+    } catch (error) {
+      console.log(error)
+      return false
     }
-
-    return booking
   }
+
+  @FieldResolver(() => [ProcedureWithInfoType])
+  async procedures(@Root() booking: IBooking) {
+    const prWithInfo: IProceduresForBooking = await ProceduresForBooking.findOne(
+      {
+        booking: booking._id,
+      }
+    )
+      .populate("procedures.procedure")
+      .lean()
+    return prWithInfo.procedures
+  }
+
+  // @Authorized()
+  // @Mutation(() => BookingType)
+  // async addProcedureToBooking(
+  //   @Arg("booking_id") booking_id: string,
+  //   @Arg("procedure_slug") procedure_slug: string
+  // ) {
+  //   const booking = await Booking.findById(booking_id)
+  //     .populate(["procedures", "user"])
+  //     .exec()
+  //   const procedure = await Procedure.findOne({ slug: procedure_slug }).lean()
+
+  //   if (booking && procedure) {
+  //     booking.procedures.push(procedure)
+  //     booking.duration = booking.duration + procedure.required_time
+  //     booking.save()
+  //   }
+
+  //   return booking
+  // }
 }
